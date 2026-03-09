@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 // nowe
 import org.example.backendbankuniebieskiego.model.BankTransaction;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -20,10 +21,14 @@ import java.util.List;
 public class BankController {
 
     private final BankService bankService;
+    private final RestTemplate restTemplate;
 
-    public BankController(BankService bankService) {
+    public BankController(BankService bankService, RestTemplate restTemplate) {
         this.bankService = bankService;
+        this.restTemplate = restTemplate;
     }
+
+    private final String BLIK_URL = "http://localhost:8082/api/blik";
 
     // ==========================================
     // ENDPOINTY DLA APLIKACJI MOBILNEJ (ANDROID)
@@ -74,6 +79,30 @@ public class BankController {
         } else {
             return ResponseEntity.badRequest().body("Odrzucono: Brak środków lub nieznane konto");
         }
+    }
+
+    // --- NOWE ENDPOINTY (Pośrednicy do BLIKa) ---
+
+    // 1. Aplikacja prosi bank o kod BLIK
+    @PostMapping("/blik/generate")
+    public ResponseEntity<String> generateBlik(@RequestParam String accountNumber) {
+        // Bank z automatu dopisuje swoje ID ("BLUE_BANK"), aplikacja nie musi tego wiedzieć
+        String url = BLIK_URL + "/generate?accountNumber=" + accountNumber + "&bankId=BLUE_BANK";
+        return restTemplate.postForEntity(url, null, String.class);
+    }
+
+    // 2. Aplikacja pyta bank o oczekujące płatności
+    @GetMapping("/blik/pending/{accountNumber}")
+    public ResponseEntity<String> checkPendingBlik(@PathVariable String accountNumber) {
+        String url = BLIK_URL + "/pending/" + accountNumber;
+        return restTemplate.getForEntity(url, String.class);
+    }
+
+    // 3. Aplikacja wysyła do banku zatwierdzenie płatności
+    @PostMapping("/blik/authorize")
+    public ResponseEntity<String> authorizeBlik(@RequestParam String accountNumber, @RequestParam boolean isApproved) {
+        String url = BLIK_URL + "/authorize?accountNumber=" + accountNumber + "&isApproved=" + isApproved;
+        return restTemplate.postForEntity(url, null, String.class);
     }
 }
 
