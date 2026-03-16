@@ -81,6 +81,22 @@ public class BankController {
         }
     }
 
+    // Endpoint dla płatności zbliżeniowych
+    @PostMapping("/card/charge")
+    public ResponseEntity<String> chargeCard(
+            @RequestParam String cardUid,
+            @RequestParam BigDecimal amount,
+            @RequestParam(defaultValue = "Płatność Kartą") String description) {
+
+        boolean success = bankService.chargeByCardUid(cardUid, amount, description);
+
+        if (success) {
+            return ResponseEntity.ok("Płatność kartą zaakceptowana");
+        } else {
+            return ResponseEntity.badRequest().body("Odrzucono: Brak środków lub nieznana karta");
+        }
+    }
+
     // --- NOWE ENDPOINTY (Pośrednicy do BLIKa) ---
 
     // 1. Aplikacja prosi bank o kod BLIK

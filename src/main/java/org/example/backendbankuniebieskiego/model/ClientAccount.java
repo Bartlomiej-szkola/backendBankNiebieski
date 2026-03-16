@@ -30,6 +30,9 @@ public class ClientAccount {
     @Column(nullable = false)
     private BigDecimal balance; // Stan konta
 
+    @Column(nullable = false)
+    private String cardUid; // Unikalny identyfikator sprzętowy karty/NFC
+
     // Pole pomocnicze na przyszłość do logowania z aplikacji Android
     private String mobileAppPin;
 

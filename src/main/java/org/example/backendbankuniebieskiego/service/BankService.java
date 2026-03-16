@@ -71,4 +71,30 @@ public class BankService {
         }
         return false;
     }
+
+    @Transactional
+    public boolean chargeByCardUid(String cardUid, BigDecimal amount, String description) {
+        Optional<ClientAccount> accountOpt = accountRepository.findByCardUid(cardUid);
+
+        if (accountOpt.isPresent()) {
+            ClientAccount account = accountOpt.get();
+            if (account.getBalance().compareTo(amount) >= 0) {
+                // Zdejmujemy środki
+                account.setBalance(account.getBalance().subtract(amount));
+                accountRepository.save(account);
+
+                // Zapisujemy historię
+                BankTransaction transaction = new BankTransaction();
+                transaction.setAccountNumber(account.getAccountNumber());
+                transaction.setAmount(amount.negate());
+                transaction.setType("KARTA");
+                transaction.setDescription(description);
+                transaction.setTimestamp(LocalDateTime.now());
+                transactionRepository.save(transaction);
+
+                return true;
+            }
+        }
+        return false; // Brak karty w bazie lub brak środków
+    }
 }
