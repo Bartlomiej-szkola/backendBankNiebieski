@@ -28,7 +28,7 @@ public class BankController {
         this.restTemplate = restTemplate;
     }
 
-    private final String BLIK_URL = "http://localhost:8082/api/blik";
+    private final String BLIK_URL = "http://192.168.0.138:8082/api/blik";
 
     // ==========================================
     // ENDPOINTY DLA APLIKACJI MOBILNEJ (ANDROID)
@@ -63,6 +63,14 @@ public class BankController {
     @PostMapping("/account")
     public ClientAccount createAccount(@RequestBody ClientAccount account) {
         return bankService.createAccount(account);
+    }
+
+    @GetMapping("/account/by-phone/{phone}")
+    public ResponseEntity<String> getAccountNumberByPhone(@PathVariable String phone) {
+        // Prosimy serwis o znalezienie numeru konta
+        return bankService.getAccountNumberByPhone(phone)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     // Zmodyfikowany endpoint - teraz przyjmuje też "description" (nazwę sklepu)

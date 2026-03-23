@@ -31,6 +31,12 @@ public class BankService {
         return accountRepository.findByAccountNumber(accountNumber);
     }
 
+    public Optional<String> getAccountNumberByPhone(String phone) {
+        // Zakładam, że w BankService masz wstrzyknięte ClientAccountRepository jako 'repository' lub 'accountRepository'
+        return accountRepository.findByPhoneNumber(phone)
+                .map(ClientAccount::getAccountNumber);
+    }
+
     // --- NOWE: LOGOWANIE DLA APLIKACJI MOBILNEJ ---
     public boolean verifyLogin(String accountNumber, String pin) {
         Optional<ClientAccount> account = accountRepository.findByAccountNumber(accountNumber);

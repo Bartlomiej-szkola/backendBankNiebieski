@@ -33,8 +33,12 @@ public class ClientAccount {
     @Column(nullable = false)
     private String cardUid; // Unikalny identyfikator sprzętowy karty/NFC
 
+    @Column(unique = true) // To sprawi, że Hibernate utworzy kolumnę z kluczem UNIQUE
+    private String phoneNumber;
+
     // Pole pomocnicze na przyszłość do logowania z aplikacji Android
     private String mobileAppPin;
+
 
     public Long getId() {
         return id;
@@ -82,5 +86,21 @@ public class ClientAccount {
 
     public void setMobileAppPin(String mobileAppPin) {
         this.mobileAppPin = mobileAppPin;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getCardUid() {
+        return cardUid;
+    }
+
+    public void setCardUid(String cardUid) {
+        this.cardUid = cardUid;
     }
 }
