@@ -2,7 +2,6 @@ package org.example.backendbankuniebieskiego.controller;
 
 import org.example.backendbankuniebieskiego.model.ClientAccount;
 import org.example.backendbankuniebieskiego.service.BankService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,8 +28,7 @@ public class BankController {
         this.restTemplate = restTemplate;
     }
 
-    @Value("${blik.server.url}")
-    private String BLIK_URL;
+    private final String BLIK_URL = "http://192.168.0.173:8082/api/blik";
 
     // ==========================================
     // ENDPOINTY DLA APLIKACJI MOBILNEJ (ANDROID)
