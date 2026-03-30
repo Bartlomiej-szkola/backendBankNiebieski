@@ -103,4 +103,26 @@ public class BankService {
         }
         return false; // Brak karty w bazie lub brak środków
     }
+
+    @Transactional
+    public boolean depositAccount(String accountNumber, BigDecimal amount, String description) {
+        Optional<ClientAccount> accountOpt = accountRepository.findByAccountNumber(accountNumber);
+        if (accountOpt.isPresent()) {
+            ClientAccount account = accountOpt.get();
+            // Dodajemy środki
+            account.setBalance(account.getBalance().add(amount));
+            accountRepository.save(account);
+
+            // Zapis do historii (kwota na plusie)
+            BankTransaction transaction = new BankTransaction();
+            transaction.setAccountNumber(accountNumber);
+            transaction.setAmount(amount); // Dodatnia!
+            transaction.setType("PRZELEW NA TELEFON");
+            transaction.setDescription(description);
+            transaction.setTimestamp(LocalDateTime.now());
+            transactionRepository.save(transaction);
+            return true;
+        }
+        return false;
+    }
 }

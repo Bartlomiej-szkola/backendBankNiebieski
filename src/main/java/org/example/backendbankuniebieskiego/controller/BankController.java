@@ -28,7 +28,7 @@ public class BankController {
         this.restTemplate = restTemplate;
     }
 
-    private final String BLIK_URL = "http://192.168.0.138:8082/api/blik";
+    private final String BLIK_URL = "http://192.168.0.173:8082/api/blik";
 
     // ==========================================
     // ENDPOINTY DLA APLIKACJI MOBILNEJ (ANDROID)
@@ -127,6 +127,28 @@ public class BankController {
     public ResponseEntity<String> authorizeBlik(@RequestParam String accountNumber, @RequestParam boolean isApproved) {
         String url = BLIK_URL + "/authorize?accountNumber=" + accountNumber + "&isApproved=" + isApproved;
         return restTemplate.postForEntity(url, null, String.class);
+    }
+
+    // 4. Aplikacja zleca przelew na telefon (Bank przekazuje do BLIK-a)
+    @PostMapping("/blik/transfer")
+    public ResponseEntity<String> transferToPhone(
+            @RequestParam String fromAccount,
+            @RequestParam String toPhone,
+            @RequestParam BigDecimal amount) {
+
+        // Bank w locie przekazuje żądanie do BLIK
+        String url = BLIK_URL + "/transfer?fromAccount=" + fromAccount + "&toPhone=" + toPhone + "&amount=" + amount;
+        return restTemplate.postForEntity(url, null, String.class);
+    }
+
+    @PostMapping("/deposit")
+    public ResponseEntity<String> depositAccount(
+            @RequestParam String accountNumber,
+            @RequestParam BigDecimal amount,
+            @RequestParam(defaultValue = "Przelew przychodzący") String description) {
+        boolean success = bankService.depositAccount(accountNumber, amount, description);
+        if (success) return ResponseEntity.ok("Wpłata udana");
+        return ResponseEntity.badRequest().body("Nieznane konto");
     }
 }
 
