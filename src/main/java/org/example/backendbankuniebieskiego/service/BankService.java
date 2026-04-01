@@ -1,7 +1,9 @@
 package org.example.backendbankuniebieskiego.service;
 
 import org.example.backendbankuniebieskiego.model.ClientAccount;
+import org.example.backendbankuniebieskiego.model.PaymentCard;
 import org.example.backendbankuniebieskiego.repository.ClientAccountRepository;
+import org.example.backendbankuniebieskiego.repository.PaymentCardRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.example.backendbankuniebieskiego.model.BankTransaction;
@@ -17,10 +19,12 @@ public class BankService {
 
     private final ClientAccountRepository accountRepository;
     private final BankTransactionRepository transactionRepository;
+    private final PaymentCardRepository paymentCardRepository;
 
-    public BankService(ClientAccountRepository accountRepository, BankTransactionRepository transactionRepository) {
+    public BankService(ClientAccountRepository accountRepository, BankTransactionRepository transactionRepository, PaymentCardRepository paymentCardRepository) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
+        this.paymentCardRepository = paymentCardRepository;
     }
 
     public ClientAccount createAccount(ClientAccount account) {
@@ -80,19 +84,25 @@ public class BankService {
 
     @Transactional
     public boolean chargeByCardUid(String cardUid, BigDecimal amount, String description) {
-        Optional<ClientAccount> accountOpt = accountRepository.findByCardUid(cardUid);
+        // 1. Szukamy aktywnej karty po UID
+        Optional<PaymentCard> cardOpt = paymentCardRepository.findByCardUidAndIsActiveTrue(cardUid);
 
-        if (accountOpt.isPresent()) {
-            ClientAccount account = accountOpt.get();
+        if (cardOpt.isPresent()) {
+            PaymentCard card = cardOpt.get();
+            // 2. Pobieramy konto przypisane do tej karty
+            ClientAccount account = card.getClientAccount();
+
+            // 3. Sprawdzamy, czy na koncie są środki
             if (account.getBalance().compareTo(amount) >= 0) {
+
                 // Zdejmujemy środki
                 account.setBalance(account.getBalance().subtract(amount));
                 accountRepository.save(account);
 
-                // Zapisujemy historię
+                // Zapisujemy historię transakcji
                 BankTransaction transaction = new BankTransaction();
                 transaction.setAccountNumber(account.getAccountNumber());
-                transaction.setAmount(amount.negate());
+                transaction.setAmount(amount.negate()); // Kwota ujemna
                 transaction.setType("KARTA");
                 transaction.setDescription(description);
                 transaction.setTimestamp(LocalDateTime.now());
@@ -101,7 +111,7 @@ public class BankService {
                 return true;
             }
         }
-        return false; // Brak karty w bazie lub brak środków
+        return false; // Brak aktywnej karty lub brak środków na koncie docelowym
     }
 
     @Transactional
@@ -124,5 +134,20 @@ public class BankService {
             return true;
         }
         return false;
+    }
+
+    // --- WYDAWANIE NOWEJ KARTY ---
+    public PaymentCard addCardToAccount(String accountNumber, String cardUid) {
+        // Szukamy konta
+        ClientAccount account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(() -> new RuntimeException("Konto nie istnieje!"));
+
+        // Tworzymy nową kartę przypisaną do tego konta
+        PaymentCard card = new PaymentCard();
+        card.setCardUid(cardUid);
+        card.setClientAccount(account);
+        card.setActive(true);
+
+        return paymentCardRepository.save(card);
     }
 }

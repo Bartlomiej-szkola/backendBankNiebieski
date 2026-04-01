@@ -152,6 +152,20 @@ public class BankController {
         if (success) return ResponseEntity.ok("Wpłata udana");
         return ResponseEntity.badRequest().body("Nieznane konto");
     }
+
+    // --- DODAWANIE KARTY DO KONTA (Użyjemy tego w Aplikacji Administratora) ---
+    // czy ta nazwa /card jest odpowiednia?
+    @PostMapping("/card")
+    public ResponseEntity<String> addCardToAccount(
+            @RequestParam String accountNumber,
+            @RequestParam String cardUid) {
+        try {
+            bankService.addCardToAccount(accountNumber, cardUid);
+            return ResponseEntity.ok("Karta " + cardUid + " przypisana do konta " + accountNumber);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }
 
 // Klasa pomocnicza do logowania (możesz ją wydzielić do osobnego pliku LoginRequest.java)

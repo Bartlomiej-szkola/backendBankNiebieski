@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Data
@@ -30,8 +32,8 @@ public class ClientAccount {
     @Column(nullable = false)
     private BigDecimal balance; // Stan konta
 
-    @Column(nullable = false)
-    private String cardUid; // Unikalny identyfikator sprzętowy karty/NFC
+    @OneToMany(mappedBy = "clientAccount", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<PaymentCard> cards = new ArrayList<>();
 
     @Column(unique = true) // To sprawi, że Hibernate utworzy kolumnę z kluczem UNIQUE
     private String phoneNumber;
@@ -96,11 +98,11 @@ public class ClientAccount {
         this.phoneNumber = phoneNumber;
     }
 
-    public String getCardUid() {
-        return cardUid;
+    public List<PaymentCard> getCards() {
+        return cards;
     }
 
-    public void setCardUid(String cardUid) {
-        this.cardUid = cardUid;
+    public void setCards(List<PaymentCard> cards) {
+        this.cards = cards;
     }
 }
