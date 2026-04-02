@@ -166,6 +166,56 @@ public class BankController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    // ==========================================
+    // ENDPOINTY DLA ADMINISTRATORA
+    // ==========================================
+
+    // TWORZENIE KLIENTA
+    @PostMapping("/admin/account")
+    public ResponseEntity<?> adminCreateAccount(@RequestBody ClientAccount account) {
+        try {
+            ClientAccount created = bankService.adminCreateAccount(account);
+            return ResponseEntity.ok(created);
+        } catch (IllegalArgumentException e) {
+            if ("PHONE_EXISTS".equals(e.getMessage())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body("Numer telefonu jest już w bazie!");
+            }
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // POBIERANIE KLIENTA PO UID KARTY
+    @GetMapping("/admin/card/{cardUid}/client")
+    public ResponseEntity<ClientAccount> getClientByCard(@PathVariable String cardUid) {
+        return bankService.getAccountByCardUid(cardUid)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // AKTUALIZACJA DANYCH KLIENTA
+    @PutMapping("/admin/account/{accountNumber}")
+    public ResponseEntity<?> updateClient(
+            @PathVariable String accountNumber,
+            @RequestParam String name,
+            @RequestParam String surname,
+            @RequestParam String phone) {
+        try {
+            ClientAccount updated = bankService.updateClientInfo(accountNumber, name, surname, phone);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Numer telefonu zajęty!");
+        }
+    }
+
+    // ZMIANA STATUSU KARTY
+    @PatchMapping("/admin/card/{cardUid}/status")
+    public ResponseEntity<String> updateCardStatus(
+            @PathVariable String cardUid,
+            @RequestParam boolean isActive) {
+        boolean success = bankService.changeCardStatus(cardUid, isActive);
+        return success ? ResponseEntity.ok("Status zmieniony") : ResponseEntity.notFound().build();
+    }
 }
 
 // Klasa pomocnicza do logowania (możesz ją wydzielić do osobnego pliku LoginRequest.java)

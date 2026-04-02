@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.util.Optional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Random;
 
 @Service
 public class BankService {
@@ -31,6 +32,51 @@ public class BankService {
         return accountRepository.save(account);
     }
 
+    @Transactional
+    public ClientAccount adminCreateAccount(ClientAccount newAccount) {
+        // Sprawdzamy czy telefon już istnieje w bazie
+        if (accountRepository.findByPhoneNumber(newAccount.getPhoneNumber()).isPresent()) {
+            throw new IllegalArgumentException("PHONE_EXISTS");
+        }
+
+        Random random = new Random();
+
+        // Losowanie unikalnego 8-cyfrowego numeru konta
+        String generatedAccountNumber;
+        do {
+            generatedAccountNumber = String.format("%08d", random.nextInt(100000000));
+        } while (accountRepository.findByAccountNumber(generatedAccountNumber).isPresent());
+
+        // Losowanie 4-cyfrowego PINu
+        String generatedPin = String.format("%04d", random.nextInt(10000));
+
+        newAccount.setAccountNumber(generatedAccountNumber);
+        newAccount.setMobileAppPin(generatedPin);
+        if (newAccount.getBalance() == null) {
+            newAccount.setBalance(new BigDecimal("0.00"));
+        }
+
+        return accountRepository.save(newAccount);
+    }
+
+    // AKTUALIZACJA DANYCH KLIENTA
+    @Transactional
+    public ClientAccount updateClientInfo(String accountNumber, String name, String surname, String phone) {
+        ClientAccount account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(() -> new RuntimeException("Nie znaleziono konta"));
+
+        // Sprawdzamy, czy nowy telefon nie należy już do kogoś innego
+        Optional<ClientAccount> phoneOwner = accountRepository.findByPhoneNumber(phone);
+        if (phoneOwner.isPresent() && !phoneOwner.get().getAccountNumber().equals(accountNumber)) {
+            throw new IllegalArgumentException("PHONE_EXISTS");
+        }
+
+        account.setOwnerName(name);
+        account.setOwnerSurname(surname);
+        account.setPhoneNumber(phone);
+        return accountRepository.save(account);
+    }
+
     public Optional<ClientAccount> getAccountInfo(String accountNumber) {
         return accountRepository.findByAccountNumber(accountNumber);
     }
@@ -39,6 +85,11 @@ public class BankService {
         // Zakładam, że w BankService masz wstrzyknięte ClientAccountRepository jako 'repository' lub 'accountRepository'
         return accountRepository.findByPhoneNumber(phone)
                 .map(ClientAccount::getAccountNumber);
+    }
+
+    // WYSZUKIWANIE KLIENTA PO NUMERZE KARTY (Do skanowania w apce admina)
+    public Optional<ClientAccount> getAccountByCardUid(String cardUid) {
+        return paymentCardRepository.findByCardUid(cardUid).map(PaymentCard::getClientAccount);
     }
 
     // --- NOWE: LOGOWANIE DLA APLIKACJI MOBILNEJ ---
@@ -149,5 +200,18 @@ public class BankService {
         card.setActive(true);
 
         return paymentCardRepository.save(card);
+    }
+
+    // ZMIANA STATUSU KARTY (Zablokuj/Odblokuj)
+    @Transactional
+    public boolean changeCardStatus(String cardUid, boolean isActive) {
+        Optional<PaymentCard> cardOpt = paymentCardRepository.findByCardUid(cardUid);
+        if (cardOpt.isPresent()) {
+            PaymentCard card = cardOpt.get();
+            card.setActive(isActive);
+            paymentCardRepository.save(card);
+            return true;
+        }
+        return false;
     }
 }
