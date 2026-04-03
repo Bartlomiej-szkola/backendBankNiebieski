@@ -57,6 +57,15 @@ public class BankController {
         return ResponseEntity.ok(bankService.getAccountHistory(accountNumber));
     }
 
+    // ZMIANA STATUSU KARTY (Dla klienta)
+    @PatchMapping("/card/{cardUid}/status")
+    public ResponseEntity<String> updateMyCardStatus(
+            @PathVariable String cardUid,
+            @RequestParam boolean isActive) {
+        boolean success = bankService.changeCardStatus(cardUid, isActive);
+        return success ? ResponseEntity.ok("Status zmieniony") : ResponseEntity.notFound().build();
+    }
+
 
     // ==========================================
     // ENDPOINTY DLA SYSTEMU BLIK / WEWNĘTRZNE
