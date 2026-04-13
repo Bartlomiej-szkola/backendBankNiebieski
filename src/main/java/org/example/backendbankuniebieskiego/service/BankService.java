@@ -21,6 +21,7 @@ public class BankService {
     private final ClientAccountRepository accountRepository;
     private final BankTransactionRepository transactionRepository;
     private final PaymentCardRepository paymentCardRepository;
+    private final BigDecimal CARD_PIN_MIN_AMMOUNT = new BigDecimal("100.00");
 
     public BankService(ClientAccountRepository accountRepository, BankTransactionRepository transactionRepository, PaymentCardRepository paymentCardRepository) {
         this.accountRepository = accountRepository;
@@ -134,12 +135,21 @@ public class BankService {
     }
 
     @Transactional
-    public boolean chargeByCardUid(String cardUid, BigDecimal amount, String description) {
+    public boolean chargeByCardUid(String cardUid, BigDecimal amount, String description, String pin) {
         // 1. Szukamy aktywnej karty po UID
         Optional<PaymentCard> cardOpt = paymentCardRepository.findByCardUidAndIsActiveTrue(cardUid);
 
         if (cardOpt.isPresent()) {
             PaymentCard card = cardOpt.get();
+
+            // Wymaganie PINU
+            // Jeśli kwota > 100 LUB klient i tak podał PIN (np. terminal wymusił losowo)
+            if (amount.compareTo(CARD_PIN_MIN_AMMOUNT) > 0 || (pin != null && !pin.isEmpty())) {
+                if (pin == null || !pin.equals(card.getPin())) {
+                    throw new IllegalArgumentException("INVALID_PIN"); // Błędny lub brakujący PIN
+                }
+            }
+
             // 2. Pobieramy konto przypisane do tej karty
             ClientAccount account = card.getClientAccount();
 
@@ -160,9 +170,11 @@ public class BankService {
                 transactionRepository.save(transaction);
 
                 return true;
+            } else{
+                throw new IllegalArgumentException("NO_FUNDS"); // Brak środków
             }
         }
-        return false; // Brak aktywnej karty lub brak środków na koncie docelowym
+        throw new IllegalArgumentException("CARD_NOT_FOUND"); // Zła lub zablokowana karta
     }
 
     @Transactional
@@ -188,7 +200,7 @@ public class BankService {
     }
 
     // --- WYDAWANIE NOWEJ KARTY ---
-    public PaymentCard addCardToAccount(String accountNumber, String cardUid) {
+    public PaymentCard addCardToAccount(String accountNumber, String cardUid, String pin) {
         // Szukamy konta
         ClientAccount account = accountRepository.findByAccountNumber(accountNumber)
                 .orElseThrow(() -> new RuntimeException("Konto nie istnieje!"));
@@ -197,6 +209,7 @@ public class BankService {
         PaymentCard card = new PaymentCard();
         card.setCardUid(cardUid);
         card.setClientAccount(account);
+        card.setPin(pin);
         card.setActive(true);
 
         return paymentCardRepository.save(card);
@@ -213,5 +226,14 @@ public class BankService {
             return true;
         }
         return false;
+    }
+
+    @Transactional
+    public boolean changeCardPin(String cardUid, String newPin) {
+        return paymentCardRepository.findByCardUid(cardUid).map(card -> {
+            card.setPin(newPin);
+            paymentCardRepository.save(card);
+            return true;
+        }).orElse(false);
     }
 }
