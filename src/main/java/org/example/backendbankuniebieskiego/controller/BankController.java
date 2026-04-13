@@ -105,14 +105,25 @@ public class BankController {
     public ResponseEntity<String> chargeCard(
             @RequestParam String cardUid,
             @RequestParam BigDecimal amount,
+            @RequestParam(required = false) String pin, // Opcjonalny (wymagany tylko powyżej 100 zł)
             @RequestParam(defaultValue = "Płatność Kartą") String description) {
 
-        boolean success = bankService.chargeByCardUid(cardUid, amount, description);
+        try {
+            boolean success = bankService.chargeByCardUid(cardUid, amount, description, pin);
+            if (success) {
+                return ResponseEntity.ok("SUCCESS");
+            }
+            return ResponseEntity.badRequest().body("UNKNOWN_ERROR");
 
-        if (success) {
-            return ResponseEntity.ok("Płatność kartą zaakceptowana");
-        } else {
-            return ResponseEntity.badRequest().body("Odrzucono: Brak środków lub nieznana karta");
+        } catch (IllegalArgumentException e) {
+            // Zwracamy konkretne błędy, by terminal wiedział co zagrać (jaki dźwięk wydać)
+            if (e.getMessage().equals("INVALID_PIN")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("INVALID_PIN");
+            } else if (e.getMessage().equals("NO_FUNDS")) {
+                return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED).body("NO_FUNDS");
+            } else {
+                return ResponseEntity.badRequest().body("CARD_NOT_FOUND");
+            }
         }
     }
 
@@ -167,9 +178,10 @@ public class BankController {
     @PostMapping("/card")
     public ResponseEntity<String> addCardToAccount(
             @RequestParam String accountNumber,
-            @RequestParam String cardUid) {
+            @RequestParam String cardUid,
+            @RequestParam String pin){
         try {
-            bankService.addCardToAccount(accountNumber, cardUid);
+            bankService.addCardToAccount(accountNumber, cardUid, pin);
             return ResponseEntity.ok("Karta " + cardUid + " przypisana do konta " + accountNumber);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -224,6 +236,15 @@ public class BankController {
             @RequestParam boolean isActive) {
         boolean success = bankService.changeCardStatus(cardUid, isActive);
         return success ? ResponseEntity.ok("Status zmieniony") : ResponseEntity.notFound().build();
+    }
+
+    // ZMIANA PIN-u PRZEZ ADMINISTRATORA
+    @PatchMapping("/admin/card/{cardUid}/pin")
+    public ResponseEntity<String> changeCardPin(
+            @PathVariable String cardUid,
+            @RequestParam String newPin) {
+        boolean success = bankService.changeCardPin(cardUid, newPin);
+        return success ? ResponseEntity.ok("PIN zmieniony pomyślnie") : ResponseEntity.notFound().build();
     }
 }
 
