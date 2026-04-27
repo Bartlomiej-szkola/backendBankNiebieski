@@ -145,8 +145,13 @@ public class BankService {
             // Wymaganie PINU
             // Jeśli kwota > 100 LUB klient i tak podał PIN (np. terminal wymusił losowo)
             if (amount.compareTo(CARD_PIN_MIN_AMMOUNT) > 0 || (pin != null && !pin.isEmpty())) {
-                if (pin == null || !pin.equals(card.getPin())) {
-                    throw new IllegalArgumentException("INVALID_PIN"); // Błędny lub brakujący PIN
+                // Jeśli nie podał w ogóle, a jest wymagany:
+                if (pin == null || pin.isEmpty()) {
+                    throw new IllegalArgumentException("PIN_REQUIRED");
+                }
+                // Jeśli podał, ale nie pasuje do bazy:
+                if (!pin.equals(card.getPin())) {
+                    throw new IllegalArgumentException("INVALID_PIN");
                 }
             }
 

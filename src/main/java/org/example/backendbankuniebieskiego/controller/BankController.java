@@ -117,8 +117,10 @@ public class BankController {
 
         } catch (IllegalArgumentException e) {
             // Zwracamy konkretne błędy, by terminal wiedział co zagrać (jaki dźwięk wydać)
-            if (e.getMessage().equals("INVALID_PIN")) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("INVALID_PIN");
+            if (e.getMessage().equals("PIN_REQUIRED")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("PIN_REQUIRED");
+            } else if (e.getMessage().equals("INVALID_PIN")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("INVALID_PIN"); // SPRING dla 401 CZYŚCI BODY!!1!
             } else if (e.getMessage().equals("NO_FUNDS")) {
                 return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED).body("NO_FUNDS");
             } else {
