@@ -16,6 +16,9 @@ public class PaymentCard {
     @Column(unique = true, nullable = false)
     private String cardUid; // Chip NFC
 
+    @Column(nullable = false)
+    private String pin;
+
     private boolean isActive = true; // Pozwala zablokować kartę w razie kradzieży
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -46,6 +49,14 @@ public class PaymentCard {
 
     public void setCardUid(String cardUid) {
         this.cardUid = cardUid;
+    }
+
+    public String getPin() {
+        return pin;
+    }
+
+    public void setPin(String pin) {
+        this.pin = pin;
     }
 
     public boolean isActive() {
